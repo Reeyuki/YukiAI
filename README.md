@@ -31,7 +31,7 @@
 # Quickstart
 
 ### For End Users
-Install binary from https://github.com/TheLp281/PromptLama/releases
+Install binary from https://github.com/Reeyuki/PromptLama/releases
 
 ### For Developers
 
