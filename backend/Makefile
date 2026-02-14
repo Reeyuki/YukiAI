@@ -3,17 +3,17 @@
 run:
 	@echo Starting the VoiceAI app...
 	@if [ -f venv/bin/python ]; then \
-		venv/bin/python -m uvicorn main:app --reload --host 0.0.0.0; \
+		venv/bin/python -m uvicorn main:app --reload --host 0.0.0.0 --port=8000; \
 	else \
-		venv\Scripts\python.exe -m uvicorn main:app --reload --host 0.0.0.0; \
+		venv\Scripts\python.exe -m uvicorn main:app --reload --host 0.0.0.0 --port=8000; \
 	fi
 
 run-production:
 	@echo Starting the VoiceAI app...
 	@if [ -f venv/bin/python ]; then \
-		venv/bin/python -m uvicorn main:app --host 0.0.0.0; \
+		venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port=8010; \
 	else \
-		venv\Scripts\python.exe -m uvicorn main:app --host 0.0.0.0; \
+		venv\Scripts\python.exe -m uvicorn main:app --host 0.0.0.0 --port=8010; \
 	fi
 
 
@@ -32,9 +32,6 @@ format:
 	else \
 		venv\Scripts\python.exe -m ruff format .; \
 	fi
-	npx prettier static/index.html --write
-	npx prettier static/main.js --write
-
 
 install:
 	@echo Installing dependencies...

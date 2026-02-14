@@ -3,19 +3,27 @@ This module implements a FastAPI-based server for handling chat interactions,
 managing chat history, and generating audio responses using AI models.
 """
 
-import asyncio
 import logging
 import os
 import sys
 import time
 import uuid
+from pathlib import Path
 from typing import Optional
 
 import uvicorn
 from fastapi import Cookie, FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+from ai import (
+    extract_user_input_async,
+    process_audio_file_with_language,
+    response_stream_generator,
+)
+from chat import chat_storage_manager
+from config import SYSTEM_MESSAGE
+from ollama import does_model_exist, ollama_models
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,18 +31,49 @@ logging.basicConfig(
     handlers=[logging.FileHandler("server.log"), logging.StreamHandler(sys.stdout)],
 )
 
-
-from ai import (
-    extract_user_input_async,
-    response_stream_generator,
-)
-from chat import chat_storage_manager
-from ollama import does_model_exist, ollama_models
-
 os.makedirs("static/audio", exist_ok=True)
+os.makedirs("frontend/dist", exist_ok=True)
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+FRONTEND_DIR = BASE_DIR / "frontend"
+BACKEND_STATIC_DIR = BASE_DIR / "backend" / "static"
+FRONTEND_STATIC_DIR = BASE_DIR / "frontend" / "static"
+DIST_DIR = BASE_DIR / "frontend" / "dist"
+ASSETS_DIR = BASE_DIR / "frontend" / "assets"
+
+
+os.makedirs(BACKEND_STATIC_DIR, exist_ok=True)
+os.makedirs(FRONTEND_STATIC_DIR, exist_ok=True)
+os.makedirs(DIST_DIR, exist_ok=True)
+os.makedirs(ASSETS_DIR, exist_ok=True)
+
+
+class FallbackStaticFiles(StaticFiles):
+    def __init__(self, primary_dir, fallback_dir, **kwargs):
+        super().__init__(directory=primary_dir, **kwargs)
+        self.fallback_dir = fallback_dir
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 404:
+            fallback_file = self.fallback_dir / path
+            if fallback_file.exists() and fallback_file.is_file():
+                from fastapi.responses import FileResponse
+
+                return FileResponse(fallback_file)
+        return response
+
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
+
+app.mount(
+    "/static",
+    FallbackStaticFiles(BACKEND_STATIC_DIR, FRONTEND_STATIC_DIR),
+    name="static",
+)
+app.mount("/dist", StaticFiles(directory=DIST_DIR), name="dist")
+app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 
 
 @app.post("/api/chat/")
@@ -44,6 +83,8 @@ async def chat_llm_api(
     file: Optional[UploadFile] = File(None),
     text: Optional[str] = Form(None),
     model: Optional[str] = Form(None),
+    language: Optional[str] = Form(None),
+    system_message: Optional[str] = Form(None),
 ):
     """Handles chat requests and manages chat history."""
     if channel_id and not chat_storage_manager.does_channel_exist(
@@ -55,33 +96,31 @@ async def chat_llm_api(
         raise HTTPException(status_code=404, detail="Channel does not exist.")
     if not model:
         raise HTTPException(status_code=400, detail="Model parameter missing")
-
     if not does_model_exist(model):
         raise HTTPException(status_code=404, detail="Model does not exist")
 
     is_channel_created = False
-
     step_start_time = time.time()
     is_file_uploaded = file is not None and not text
-    user_input = await extract_user_input_async(file, text)
-    logging.info("Input reached: %s", user_input)
 
+    if is_file_uploaded:
+        user_input = await process_audio_file_with_language(file, language)
+    else:
+        user_input = await extract_user_input_async(file, text)
+
+    logging.info("Input reached: %s", user_input)
     if not user_input:
         logging.warning("Failed to extract user input for session %s.", session_id)
         raise HTTPException(
             status_code=400,
             detail="Could not extract any user input from audio or text.",
         )
-    logging.info(
-        "Extracted user input: %s. Time taken: %.2f seconds",
-        user_input,
-        time.time() - step_start_time,
-    )
+    channel = None
 
     if not channel_id:
         channel_id = str(uuid.uuid4())
         is_channel_created = True
-        chat_storage_manager.create_channel(session_id, channel_id, text)
+        channel = chat_storage_manager.create_channel(session_id, channel_id, text)
 
     step_start_time = time.time()
     chat_history = chat_storage_manager.load_chat_history(session_id, channel_id, True)
@@ -92,11 +131,22 @@ async def chat_llm_api(
         time.time() - step_start_time,
     )
 
+    if not chat_history or chat_history[0].get("role") != "system":
+        chat_history.insert(0, {"role": "system", "content": SYSTEM_MESSAGE})
+
     chat_history.append({"role": "user", "content": user_input})
+
     chat_history = chat_history[::-1] if not is_channel_created else chat_history
     return StreamingResponse(
         response_stream_generator(
-            channel_id, session_id, user_input, is_file_uploaded, chat_history, model
+            channel,
+            channel_id,
+            session_id,
+            user_input,
+            is_file_uploaded,
+            chat_history,
+            model,
+            language,
         ),
         media_type="text/plain",
     )
@@ -165,29 +215,12 @@ async def add_session_id(request, call_next):
 
 @app.get("/", response_class=HTMLResponse)
 async def get_index():
-    with open(os.path.join("static", "index.html"), encoding="utf-8") as f:
-        html = f.read()
-    return HTMLResponse(content=html)
+    return FileResponse(FRONTEND_DIR / "index.html")
 
 
 @app.get("/c/{id}", response_class=HTMLResponse)
-async def get_index_chat():
-    """Serve the chat page."""
-    with open(os.path.join("static", "index.html"), encoding="utf-8") as f:
-        return HTMLResponse(content=f.read())
-
-
-@app.get("/shutdown")
-async def shutdown():
-    """Shutdown the server."""
-    return HTTPException(status_code=403, detail="Unauthorized access")
-    logging.info("Shutting down the server...")
-    await asyncio.sleep(0.1)
-    import requests
-
-    requests.get("http://192.168.1.22:8080/shutdown")
-    os.system("shutdown now")
-    return {"message": "Server is shutting down..."}
+async def get_index_chat(id: str):
+    return FileResponse(FRONTEND_DIR / "index.html")
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -195,7 +228,7 @@ async def get_favicon():
     """Serve the favicon."""
     from io import BytesIO
 
-    with open(os.path.join("static", "favicon.ico"), "rb") as f:
+    with open(os.path.join("favicon.ico"), "rb") as f:
         favicon_content = f.read()
     return StreamingResponse(BytesIO(favicon_content), media_type="image/x-icon")
 
@@ -203,4 +236,4 @@ async def get_favicon():
 if __name__ == "__main__":
     logging.info("Starting FastAPI server...")
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8010)

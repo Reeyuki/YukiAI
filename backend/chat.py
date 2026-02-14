@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 
 import nltk
 from fastapi import HTTPException
@@ -221,15 +222,24 @@ class ChatStorageManager:
         return truncated_history
 
 
-def generate_summary_title(text):
-    from sumy.nlp.tokenizers import Tokenizer
-    from sumy.parsers.plaintext import PlaintextParser
-    from sumy.summarizers.lsa import LsaSummarizer
+def generate_summary_title(text, max_length=40):
+    text = text.strip()
+    if not text:
+        return ""
 
-    parser = PlaintextParser.from_string(text, Tokenizer("english"))
-    summarizer = LsaSummarizer()
-    summary = summarizer(parser.document, 1)
-    return " ".join(str(sentence) for sentence in summary)
+    if len(text) <= max_length:
+        return text
+
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    first_line = lines[0] if lines else text
+
+    first_line = re.sub(r"\s+", " ", first_line)
+
+    if len(first_line) > max_length:
+        truncated = first_line[:max_length].rsplit(" ", 1)[0]
+        return truncated
+
+    return first_line
 
 
 chat_storage_manager = ChatStorageManager()

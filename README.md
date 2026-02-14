@@ -1,17 +1,6 @@
 # Ollama AI Chat/Voice Frontend
 
-
-# Features
-
-### Connect to a ollama server and send messages to open source LLMs
-### Store message history
-### Speech recognition from microphone input
-### AI voice generation via EdgeTTS
-
-## Requirements:
-### **Ollama server running in your system**
-### **FFmpeg installed in your system (for speech recognition)**
-
+<img src="yukiai.png"></img>
 <table align="center">
   <tr>
     <td align="center" width="96">
@@ -25,13 +14,22 @@
   </tr>
 </table>
 
+# Features
 
+### Connect to a ollama server and send messages to open source LLMs
+### Store message history
+### Speech recognition from microphone input
+### AI voice generation via EdgeTTS
+
+## Requirements:
+### **Ollama server running in your system**
+### **FFmpeg installed in your system (for speech recognition)**
 
 
 # Quickstart
 
 ### For End Users
-Install binary from https://github.com/Reeyuki/PromptLama/releases
+Install binary from https://github.com/Reeyuki/YukiAI/releases
 
 ### For Developers
 
@@ -61,10 +59,9 @@ URL of ollama api. Defaults to http://127.0.0.1:11434
 
 ## Todo:
 
-•**Language dropdown to override recognized language**
-•**Set temperature of model**
-•**Implement model management ui**
-•**Export chat history button**
-•**Switch to vite/npm**
-•**Configure eslint/typescript**
-•**Get rid of ffmpeg dependency**
+- Set temperature of model
+- Implement model management ui
+- Export chat history button & functionality
+- Remove ffmpeg dependency
+
+

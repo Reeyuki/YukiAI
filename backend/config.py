@@ -13,3 +13,7 @@ ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
 ollama_url = f"{ollama_host}/api/chat"
 ollama_tags_url = os.getenv("OLLAMA_TAGS_URL", f"{ollama_host}/api/tags")
+
+SYSTEM_MESSAGE = os.getenv(
+    "SYSTEM_MESSAGE", "You are yukigpt, a chatbot. Be Helpful to user."
+)

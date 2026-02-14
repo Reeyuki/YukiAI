@@ -6,7 +6,7 @@
 			name="viewport"
 			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
 		/>
-		<title>Efe GPT</title>
+		<title>Yuki AI</title>
 
 		<link
 			rel="stylesheet"
@@ -25,6 +25,9 @@
 		<script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
 	</head>
 	<style>
+		:root {
+			--sidebar-width: 20rem;
+		}
 		html,
 		body {
 			height: 100%;
@@ -92,7 +95,12 @@
 			color: white;
 			font-size: 1.5rem;
 			cursor: pointer;
+			padding: 0.5rem 1rem;
+			display: flex;
+			align-items: center;
+			justify-content: center;
 		}
+
 		.channel-dropdown-menu {
 			position: absolute;
 			background-color: #333;
@@ -133,7 +141,7 @@
 			position: fixed;
 			left: 0;
 			top: 0;
-			width: 20rem;
+			width: var(--sidebar-width);
 			background-color: #121212;
 			z-index: 3;
 			transform: translateX(-100%);
@@ -243,11 +251,14 @@
 			}
 		}
 		@media screen and (max-width: 650px) {
+			:root {
+				--sidebar-width: 85vw;
+			}
 			.main-content {
 				width: 100%;
 			}
 			#sidebar {
-				width: 85vw;
+				width: var(--sidebar-width);
 				min-width: 0;
 			}
 			#textInput {
@@ -256,9 +267,9 @@
 				font-size: 1.1rem;
 			}
 			.input-bottom-bar.sidebar-push {
-				left: 85vw;
-				width: calc(100vw - 85vw);
-				max-width: calc(100vw - 85vw);
+				left: var(--sidebar-width);
+				width: calc(100vw - var(--sidebar-width));
+				max-width: calc(100vw - var(--sidebar-width));
 			}
 		}
 		@media screen and (max-width: 450px) {
@@ -272,10 +283,8 @@
 			position: fixed;
 			left: 0;
 			bottom: 47vh;
-			background: #212121;
 			padding: 0.5rem 0.75rem 0.75rem 0.75rem;
 			box-sizing: border-box;
-			z-index: 2;
 			display: flex;
 			gap: 0.5rem;
 			align-items: flex-end;
@@ -285,14 +294,15 @@
 			transition:
 				left 0.3s,
 				width 0.3s;
+			min-width: 0;
 		}
 		.input-bar-centered {
 			bottom: 2vh;
 		}
 		.input-bottom-bar.sidebar-push {
-			left: 20rem;
-			width: calc(100vw - 20rem);
-			max-width: calc(100vw - 20rem);
+			left: var(--sidebar-width);
+			width: calc(100vw - var(--sidebar-width));
+			max-width: calc(100vw - var(--sidebar-width));
 			justify-content: flex-start;
 		}
 		@media (pointer: coarse) and (max-width: 650px) {
@@ -322,6 +332,9 @@
 		#channelList li:first-child {
 			margin-bottom: 0.75rem;
 		}
+		.channel-item {
+			border-radius: 50px;
+		}
 	</style>
 	<body
 		class="text-white font-sans h-screen flex flex-col items-center p-4 relative"
@@ -334,10 +347,98 @@
 			>
 				<i class="fas fa-bars text-xl"></i>
 			</button>
+
+			<div
+				id="settingsMenu"
+				class="fixed inset-0 z-50 hidden flex items-center justify-center"
+			>
+				<div
+					class="bg-[#212121] w-96 rounded-lg shadow-xl p-6 relative flex flex-col gap-6"
+				>
+					<button
+						id="closeSettingsButton"
+						class="absolute top-4 right-4 text-white text-2xl hover:text-gray-400"
+					>
+						<i class="fas fa-times"></i>
+					</button>
+					<h2 class="text-white text-2xl font-bold text-center">
+						Settings
+					</h2>
+
+					<div class="flex flex-col gap-4">
+						<label
+							for="languageSelect"
+							class="text-gray-200 font-semibold"
+							>Language</label
+						>
+						<select
+							id="languageSelect"
+							title="Select language for recognition and TTS"
+							class="w-full px-3 py-2 rounded-lg border border-gray-600 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+						>
+							<option value="en-US">English (US)</option>
+							<option value="en-GB">English (UK)</option>
+							<option value="tr-TR">Turkish</option>
+							<option value="es-ES">Spanish (Spain)</option>
+							<option value="es-MX">Spanish (Mexico)</option>
+							<option value="fr-FR">French</option>
+							<option value="de-DE">German</option>
+							<option value="it-IT">Italian</option>
+							<option value="ja-JP">Japanese</option>
+							<option value="ko-KR">Korean</option>
+							<option value="ru-RU">Russian</option>
+							<option value="pt-BR">Portuguese (Brazil)</option>
+							<option value="pt-PT">Portuguese (Portugal)</option>
+							<option value="zh-CN">Chinese (Simplified)</option>
+							<option value="zh-TW">Chinese (Traditional)</option>
+							<option value="ar-SA">Arabic (Saudi Arabia)</option>
+							<option value="hi-IN">Hindi (India)</option>
+							<option value="nl-NL">Dutch</option>
+							<option value="sv-SE">Swedish</option>
+							<option value="no-NO">Norwegian</option>
+							<option value="fi-FI">Finnish</option>
+							<option value="da-DK">Danish</option>
+							<option value="pl-PL">Polish</option>
+							<option value="he-IL">Hebrew</option>
+							<option value="th-TH">Thai</option>
+							<option value="vi-VN">Vietnamese</option>
+						</select>
+					</div>
+
+					<div class="flex flex-col gap-2">
+						<label
+							for="systemPrompt"
+							class="text-gray-200 font-semibold"
+						>
+							System Prompt
+						</label>
+						<textarea
+							id="systemPrompt"
+							placeholder="Enter your system prompt here..."
+							class="w-full h-24 px-3 py-2 rounded-lg border border-gray-600 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+						></textarea>
+					</div>
+
+					<button
+						id="savePromptButton"
+						class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded w-full mt-2"
+					>
+						<i class="fas fa-save"></i> Save System Prompt
+					</button>
+
+					<button
+						id="deleteButton"
+						class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded w-full mt-2"
+					>
+						<i class="fas fa-trash-alt"></i> Delete All Chats
+					</button>
+				</div>
+			</div>
+
 			<div id="sidebar" class="">
 				<div class="flex flex-col items-center mb-4">
 					<h1 class="text-2xl font-bold mb-4">
-						<i class="fas fa-robot mr-2"></i>Efe GPT
+						<i class="fas fa-robot mr-2"></i>Yuki AI
 					</h1>
 					<button
 						id="closeSidebarButton"
@@ -366,10 +467,10 @@
 				></ul>
 
 				<button
-					id="deleteButton"
-					class="absolute bottom-4 left-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+					id="settingsButton"
+					class="absolute bottom-4 left-44 bg-[#212121] hover:bg-[#282828] text-white px-4 py-2 rounded z-10"
 				>
-					<i class="fas fa-trash-alt"></i> Delete All Chats
+					<i class="fas fa-cog"></i> Settings
 				</button>
 			</div>
 
@@ -378,6 +479,7 @@
 					class="chat-container rounded-lg p-6 overflow-y-auto mb-10"
 					id="chatContainer"
 				></div>
+
 				<h1 id="empty-chat-text" class="text-3xl font-bold">
 					What can i help with?
 				</h1>
@@ -498,12 +600,12 @@
 						function () {
 							var inputBar =
 								document.getElementById('inputBottomBar');
-							inputBar.style.height = '50vh';
+							inputBar.style.height = '10vh';
 						}
 					);
 				}
 			});
 		</script>
-		<script src="/static/main.js"></script>
+		<script src="/dist/bundle.js"></script>
 	</body>
 </html>

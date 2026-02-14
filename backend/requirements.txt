@@ -5,12 +5,8 @@ speechrecognition
 requests
 edge_tts
 langid
-requests
-speechrecognition
-sumy
 sqlalchemy
 ruff
 nltk
-uvicorn
 dotenv
 aiohttp
